@@ -1,0 +1,14 @@
+pytorch-lightning
+hydra-core
+omegaconf
+pretty_midi
+music21
+miditoolkit
+pypianoroll
+jupyter
+matplotlib
+plotly
+tensorboard
+kaggle
+pandas
+librosa
