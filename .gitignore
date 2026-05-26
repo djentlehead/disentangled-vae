@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Data Files 
+data/processed/
+data/raw/
+*.sf2
+
+# Notebook Checkpoints
+.ipynb_checkpoints/
+
+# IDE / Editor Files
+.vscode/
+.idea/
+
+# Logs and Checkpoints
+lightning_logs/
+checkpoints/
+
+# Temporary Files
+temp_audio.wav
+*.mid
+
+FluidR3_GM.sf2
+src.rar
