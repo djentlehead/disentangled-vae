@@ -18,13 +18,16 @@ CHECKPOINT_DIR = os.path.join(PROJECT_ROOT, "lightning_logs", "disentangled_vae"
 
 BATCH_SIZE = 64
 LEARNING_RATE = 1e-3
-EPOCHS = 100 
+EPOCHS = 100
 SEQ_LEN = 256
 LATENT_DIM_RHYTHM = 64
 LATENT_DIM_PITCH = 64
-BETA_R = 1.0  
-BETA_P = 1.0  
+BETA_R = 1.0
+BETA_P = 1.0
 CHANNELS = 32
+# KL annealing: beta starts at 0 and ramps to BETA_R/BETA_P linearly over this many steps.
+# Prevents posterior collapse (encoder outputting near-zero means for all inputs).
+ANNEAL_STEPS = 10_000
 
 class VAEDataset(Dataset):
     """
@@ -93,7 +96,8 @@ if __name__ == "__main__":
         lr=LEARNING_RATE,
         beta_r=BETA_R,
         beta_p=BETA_P,
-        channels=CHANNELS
+        channels=CHANNELS,
+        anneal_steps=ANNEAL_STEPS,
     )
     
     checkpoint_callback = ModelCheckpoint(
