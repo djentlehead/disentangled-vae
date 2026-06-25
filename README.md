@@ -1,12 +1,4 @@
----
-title: Style Transfer Studio
-emoji: 🎹
-colorFrom: purple
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
----
+
 
 # Polyphonic Music Style Transfer
 
@@ -52,9 +44,9 @@ backend in `server/main.py`) wraps the trained DisentangledVAE so you can recomb
 rhythm/pitch between MIDI clips without writing any code. See
 **[QUICKSTART.md](QUICKSTART.md)** for how to launch it on Windows with one double-click.
 
-The original Streamlit version (`app.py`) still works as a fallback — both share the same
+The original Streamlit version (`app.py`) still works as a fallback - both share the same
 model pipeline in `src/inference/`, so they can't drift apart in behavior.
 
 A DAW plugin version of the same tool exists as unbuilt source in
-**[plugin/](plugin/README.md)** — see `plugin/BUILD.md` to compile it yourself.
+**[plugin/](plugin/README.md)** - see `plugin/BUILD.md` to compile it yourself.
 
