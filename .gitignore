@@ -28,6 +28,7 @@ checkpoints/
 # Temporary Files
 temp_audio.wav
 *.mid
+!examples/*.mid
 
 FluidR3_GM.sf2
 src.rar
