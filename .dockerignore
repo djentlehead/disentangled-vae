@@ -1,0 +1,41 @@
+# Keep the build context small -- the Dockerfile COPYs specific
+# directories/files it needs rather than the whole repo, so most of this is
+# just about not uploading hundreds of MB of unrelated stuff.
+
+.git
+.gitattributes
+.gitignore
+.venv
+venv
+ENV
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+.ipynb_checkpoints
+.vscode
+.idea
+
+# Training data + outputs -- not needed to serve the trained model. Root-
+# anchored so these don't accidentally shadow nested same-named dirs (e.g.
+# src/data/, which server/main.py's import path does NOT need either, but
+# better to be explicit than rely on a naming coincidence).
+/data
+/notebooks
+/checkpoints
+/scripts
+/configs
+
+# Not part of this image.
+/plugin
+
+# Large file deliberately not bundled (see Dockerfile comment).
+/FluidR3_GM.sf2
+*.sf2
+
+# Misc local artifacts -- root-anchored so this doesn't catch examples/*.mid,
+# which the Dockerfile needs.
+/*.zip
+/*.ipynb
+/*.mid
+launch.log

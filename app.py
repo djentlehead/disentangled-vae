@@ -1,4 +1,3 @@
-# source "/c/Users/sharm/Downloads/Programming/Style Transfer/.venv/Scripts/activate"
 import io
 import os
 import sys
@@ -10,147 +9,32 @@ import streamlit as st
 import torch
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from src.models.disentangled_vae import DisentangledVAE
-
-FS         = 8     
-SEQ_LEN    = 256
-PITCH_LO   = 40    
-N_PITCH    = 32
-
-def _find_checkpoint():
-    ckpt_dir = os.path.join(os.path.dirname(__file__), "lightning_logs", "disentangled_vae")
-    if os.path.isdir(ckpt_dir):
-        cks = [f for f in os.listdir(ckpt_dir) if f.endswith(".ckpt")]
-        if cks:
-            cks.sort(key=lambda f: os.path.getmtime(os.path.join(ckpt_dir, f)), reverse=True)
-            return os.path.join(ckpt_dir, cks[0])
-    return None
-
-CHECKPOINT_PATH = _find_checkpoint()
+from src.inference.recombine import (
+    FS, SEQ_LEN, PITCH_LO, N_PITCH,
+    find_checkpoint, load_model as _load_model_from_ckpt,
+    midi_to_roll, roll_to_midi, postprocess_roll,
+    encode_roll, decode_latents,
+)
+from src.inference.audio import synthesize_wav as _synthesize_wav
 
 
-# ── Model loading (handles weights-only AND full checkpoints) ───────────────
+
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+CHECKPOINT_PATH = find_checkpoint(PROJECT_ROOT)
+
+
 @st.cache_resource(show_spinner="Loading DisentangledVAE checkpoint…")
 def load_model():
-    if CHECKPOINT_PATH is None or not os.path.exists(CHECKPOINT_PATH):
-        return None, (
-
-        )
-
-    ck = torch.load(CHECKPOINT_PATH, map_location="cpu")
-    if isinstance(ck, dict) and "state_dict" in ck:
-        # Weights-only export (what the notebook produces) OR full Lightning ckpt.
-        import inspect
-        hp = dict(ck.get("hyper_parameters", {}))
-        valid = set(inspect.signature(DisentangledVAE.__init__).parameters)
-        hp = {k: v for k, v in hp.items() if k in valid}
-        model = DisentangledVAE(**hp)
-        model.load_state_dict(ck["state_dict"], strict=True)
-    else:
-        model = DisentangledVAE.load_from_checkpoint(CHECKPOINT_PATH, map_location="cpu")
-    model.eval()
-    return model, None
+    try:
+        return _load_model_from_ckpt(CHECKPOINT_PATH), None
+    except Exception as e:
+        return None, str(e)
 
 
-# ── MIDI <-> roll (32-pitch window, MIDI 40..71, fs=8) ──────────────────────
-def midi_to_roll(pm: pretty_midi.PrettyMIDI) -> np.ndarray:
-    """Single binary roll (SEQ_LEN, N_PITCH). The model derives v_r / v_p itself."""
-    full = (pm.get_piano_roll(fs=FS) > 0).astype(np.float32)     
-    roll = full[PITCH_LO:PITCH_LO + N_PITCH].T                     
-    t = roll.shape[0]
-    if t >= SEQ_LEN:
-        return roll[:SEQ_LEN]
-    return np.concatenate([roll, np.zeros((SEQ_LEN - t, N_PITCH), np.float32)], axis=0)
+def synthesize_wav(pm: pretty_midi.PrettyMIDI):
+    return _synthesize_wav(pm, PROJECT_ROOT)
 
 
-def roll_to_midi(pr: np.ndarray, bpm: float = 120.0) -> pretty_midi.PrettyMIDI:
-
-    pm = pretty_midi.PrettyMIDI(initial_tempo=bpm)
-    inst = pretty_midi.Instrument(program=0)
-    step_s = 1.0 / FS
-    for ch in range(pr.shape[1]):
-        col = pr[:, ch].astype(int)
-        padded = np.concatenate([[0], col, [0]])
-        diffs = np.diff(padded)
-        for on, off in zip(np.where(diffs == 1)[0], np.where(diffs == -1)[0]):
-            start, end = on * step_s, off * step_s
-            if end > start:
-                inst.notes.append(pretty_midi.Note(
-                    velocity=90, pitch=PITCH_LO + ch, start=start, end=end))
-    pm.instruments.append(inst)
-    return pm
-
-
-# ── Post-processing: turn a raw probability map into a musical roll ─────────
-def postprocess_roll(prob: np.ndarray, threshold: float, min_len: int,
-                     gap_merge: int, beat_steps: int) -> np.ndarray:
-
-
-    roll = (prob >= threshold).astype(np.float32)
-
-    def runs(col):
-        """Yield (start, end_exclusive) for each contiguous active run."""
-        out, i, n = [], 0, len(col)
-        while i < n:
-            if col[i] > 0:
-                j = i
-                while j < n and col[j] > 0:
-                    j += 1
-                out.append((i, j)); i = j
-            else:
-                i += 1
-        return out
-
-    for ch in range(roll.shape[1]):
-        col = roll[:, ch]
-        if not col.any():
-            continue
-
-        if min_len > 1:
-            for a, b in runs(col):
-                if (b - a) < min_len:
-                    col[a:b] = 0.0
-
-
-        if gap_merge > 0:
-            rs = runs(col)
-            for (a1, b1), (a2, b2) in zip(rs[:-1], rs[1:]):
-                if (a2 - b1) <= gap_merge:
-                    col[b1:a2] = 1.0
-
-        roll[:, ch] = col
-
-    # 3) snap onsets to a beat grid, preserving each note's length.
-    if beat_steps > 1:
-        snapped = np.zeros_like(roll)
-        n = roll.shape[0]
-        for ch in range(roll.shape[1]):
-            for a, b in runs(roll[:, ch]):
-                g = int(round(a / beat_steps) * beat_steps)
-                g = max(0, min(g, n - 1))
-                snapped[g:min(g + (b - a), n), ch] = 1.0
-        roll = snapped
-
-    return roll
-
-
-# ── Inference (additive-merge model) ────────────────────────────────────────
-@torch.no_grad()
-def encode_roll(model, roll: np.ndarray):
-    """roll (SEQ_LEN,N_PITCH) -> (mu_r, mu_p). The model builds v_r/v_p + main feat."""
-    x = torch.from_numpy(roll).float().unsqueeze(0)
-    mu_r, _, mu_p, _ = model.encode(x)
-    return mu_r, mu_p
-
-
-@torch.no_grad()
-def decode_latents(model, z_r: torch.Tensor, z_p: torch.Tensor) -> np.ndarray:
-    """Additive merge: decoder takes z_r + z_p and returns probabilities."""
-    probs = torch.sigmoid(model.decoder(z_r + z_p, return_logits=True))
-    return probs.squeeze(0).numpy()
-
-
-# ── Visualisation ────────────────────────────────────────────────────────────
 _BG = "#0e1117"
 
 
@@ -191,16 +75,32 @@ def latent_bar_fig(z_r: torch.Tensor, z_p: torch.Tensor) -> plt.Figure:
     return fig
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-#  UI
-# ═══════════════════════════════════════════════════════════════════════════
+
 st.set_page_config(page_title="Disentangled Music Studio", layout="wide", page_icon="🎹")
 st.title("🎹 Polyphonic Music Style Transfer")
 st.markdown(
-    "**Disentangled VAE** — pitch and rhythm live in *separate* 64-dim latent spaces, "
+    "**Disentangled VAE** - pitch and rhythm live in *separate* 64-dim latent spaces, "
     "merged additively. Recombine the rhythm of one piece with the pitch of another, "
     "explore the prior, or reconstruct a single clip."
 )
+
+with st.expander("ℹ️ What this tool actually does (read before uploading)"):
+    st.markdown(
+        f"""
+This is a **rhythm/pitch recombination** tool, not a "make it sound like Chopin" composer
+filter. It encodes a MIDI clip into two separate latent codes - one for rhythm, one for
+pitch - and lets you swap either half with another clip's. Try a Bach rhythm with a
+Chopin melody contour, or just reconstruct a single piece to hear what the model keeps
+and loses.
+
+**Current limits, so results make sense:**
+- Only the first **{SEQ_LEN / FS:.0f} seconds** of any uploaded MIDI are used - the rest is ignored.
+- Only notes in MIDI pitch range **{PITCH_LO}–{PITCH_LO + N_PITCH - 1}** (roughly E2–G5) are seen by the model.
+- Output is a single instrument, binary on/off piano roll - no velocity or pedal nuance.
+- True composer-conditioned transfer (pick "Chopin," get Chopin-flavored output) is a
+  planned v2, built on a different model that isn't wired up in this app yet.
+"""
+    )
 
 model, err = load_model()
 if err:
@@ -209,16 +109,34 @@ if err:
 
 DIM = model.hparams.latent_dim
 st.success(
-    f"Model loaded — {sum(p.numel() for p in model.parameters()):,} params · "
+    f"Model loaded - {sum(p.numel() for p in model.parameters()):,} params · "
     f"z_rhythm & z_pitch: {DIM}-dim each · additive merge"
 )
 
-# ── Sidebar ──────────────────────────────────────────────────────────────────
+
+def _list_examples():
+    d = os.path.join(os.path.dirname(__file__), "examples")
+    if os.path.isdir(d):
+        return sorted(f for f in os.listdir(d) if f.lower().endswith((".mid", ".midi")))
+    return []
+
 with st.sidebar:
     st.header("Input")
+    examples = _list_examples()
+    example_choice = None
+    if examples:
+        example_choice = st.selectbox(
+            "Or load an example", ["— none —", *examples],
+            help="No MIDI handy? Pick a bundled example to try the model instantly.")
+        if example_choice == "— none —":
+            example_choice = None
     content_file = st.file_uploader("Content MIDI (rhythm source)", type=["mid", "midi"])
     style_file   = st.file_uploader("Style MIDI (pitch source, optional)", type=["mid", "midi"],
                                     help="Recombination: rhythm from Content, pitch from Style.")
+    st.caption(
+        f"Only the first {SEQ_LEN / FS:.0f}s and MIDI pitches {PITCH_LO}–{PITCH_LO + N_PITCH - 1} "
+        f"are used — see the **ℹ️ What this tool does** panel at the top of the page."
+    )
 
     st.divider()
     st.header("Generation mode")
@@ -259,20 +177,48 @@ with st.sidebar:
     bpm = st.number_input("Output BPM", 40, 240, 120, 5)
     generate_btn = st.button("Generate", type="primary", use_container_width=True)
 
-# ── Preprocessing preview ─────────────────────────────────────────────────────
-if content_file and not exploration_mode:
-    raw = content_file.read(); content_file.seek(0)
-    pm_vis = pretty_midi.PrettyMIDI(io.BytesIO(raw))
+
+def _example_bytes(name):
+    with open(os.path.join(os.path.dirname(__file__), "examples", name), "rb") as f:
+        return f.read()
+
+content_bytes = None
+if content_file is not None:
+    content_bytes = content_file.read()
+elif example_choice:
+    content_bytes = _example_bytes(example_choice)
+
+style_bytes = style_file.read() if style_file is not None else None
+
+
+def _safe_load_midi(raw_bytes: bytes, label: str):
+    """Parse uploaded MIDI bytes, surfacing a friendly error instead of a stack trace."""
+    try:
+        return pretty_midi.PrettyMIDI(io.BytesIO(raw_bytes))
+    except Exception as e:
+        st.error(f"**Couldn't read the {label} MIDI file.** It may be corrupt or not a "
+                  f"standard MIDI file. ({e})")
+        st.stop()
+
+
+if content_bytes and not exploration_mode:
+    pm_vis = _safe_load_midi(content_bytes, "Content")
     roll_vis = midi_to_roll(pm_vis)
+    if roll_vis.sum() == 0:
+        st.warning(
+            f"No notes found in MIDI pitch range {PITCH_LO}–{PITCH_LO + N_PITCH - 1} "
+            f"(roughly E2–G5) in the first {SEQ_LEN / FS:.0f}s of this file. Generation will "
+            f"likely produce silence — try a different clip or one with more mid-range notes."
+        )
     st.subheader("Input (MIDI 40–71 window, fs=8)")
     fig = roll_fig(roll_vis, "Content piano roll", cmap="Blues")
     st.pyplot(fig, use_container_width=True); plt.close(fig)
     st.divider()
 
-# ── Generation ────────────────────────────────────────────────────────────────
+
 if not generate_btn:
     st.info("Set a mode and controls in the sidebar, then click **Generate**. "
-            "Reconstruct/Recombine needs a Content MIDI.")
+            "Reconstruct/Recombine needs a Content MIDI (upload one or load an example).")
     st.stop()
 
 if exploration_mode:
@@ -281,14 +227,13 @@ if exploration_mode:
     z_p = torch.randn(1, DIM, generator=g) * pitch_sigma
     label = f"Exploration (σ_r={rhythm_sigma}, σ_p={pitch_sigma}, seed={seed})"
 else:
-    if not content_file:
-        st.error("Upload a Content MIDI for Reconstruct/Recombine mode."); st.stop()
-    raw = content_file.read()
-    pm_c = pretty_midi.PrettyMIDI(io.BytesIO(raw))
+    if not content_bytes:
+        st.error("Upload a Content MIDI (or load an example) for Reconstruct/Recombine mode."); st.stop()
+    pm_c = _safe_load_midi(content_bytes, "Content")
     mu_r, mu_p = encode_roll(model, midi_to_roll(pm_c))
 
-    if style_file:                       # recombination: pitch from style piece
-        pm_s = pretty_midi.PrettyMIDI(io.BytesIO(style_file.read()))
+    if style_bytes:                      # recombination: pitch from style piece
+        pm_s = _safe_load_midi(style_bytes, "Style")
         _, mu_p = encode_roll(model, midi_to_roll(pm_s))
         label = "Recombination (rhythm = Content, pitch = Style)"
     else:
@@ -303,7 +248,7 @@ pm_out = roll_to_midi(pr_bin, bpm=float(bpm))
 note_count = len(pm_out.instruments[0].notes) if pm_out.instruments else 0
 density = pr_bin.mean()
 
-# ── Display ───────────────────────────────────────────────────────────────────
+
 st.subheader(f"Generated - {label}")
 col_l, col_r = st.columns(2)
 with col_l:
@@ -315,24 +260,25 @@ with col_r:
     st.pyplot(fig, use_container_width=True); plt.close(fig)
 
 st.divider()
+
+
+if note_count > 0:
+    with st.spinner("Synthesizing audio…"):
+        wav, method = synthesize_wav(pm_out)
+    if wav:
+        st.audio(wav, format="audio/wav")
+        if method == "sine":
+            st.caption(
+                "Sine-wave preview - FluidSynth wasn't found, so this is a rough approximation, "
+                "not real piano tone. The downloaded MIDI is unaffected - it'll sound correct in any DAW or player."
+            )
+    else:
+        st.caption(f"Audio synthesis unavailable ({method}). Download the MIDI to listen.")
+else:
+    st.caption("No notes generated - lower the threshold and regenerate to hear audio.")
+
 buf = io.BytesIO(); pm_out.write(buf); buf.seek(0)
-st.download_button("⬇ Download Generated MIDI", data=buf,
+st.download_button("Download Generated MIDI", data=buf,
                    file_name="generated.mid", mime="audio/midi",
                    use_container_width=True)
 st.caption(f"Duration {SEQ_LEN/FS:.1f}s · fs={FS} · BPM={bpm} · {note_count} notes · density {density:.3f}")
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-

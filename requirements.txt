@@ -1,3 +1,4 @@
+torch
 pytorch-lightning
 hydra-core
 omegaconf
@@ -12,3 +13,17 @@ tensorboard
 kaggle
 pandas
 librosa
+numpy
+streamlit
+
+# Web app backend (server/main.py) -- the primary UI now. Same trio as
+# plugin/server/requirements.txt, listed here too so one `pip install -r
+# requirements.txt` covers everything the launcher scripts need.
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Optional: richer piano audio in the audio preview instead of the sine-wave
+# fallback. Also requires the native FluidSynth library/binary on your system
+# (see QUICKSTART.md).
+pyfluidsynth

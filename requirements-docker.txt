@@ -1,0 +1,17 @@
+# Minimal runtime deps for the hosted web app (server/main.py), used by the
+# Dockerfile. This is deliberately a subset of requirements.txt: it drops
+# everything only needed for training/notebooks/the desktop launcher
+# (music21, miditoolkit, pypianoroll, hydra-core, omegaconf, jupyter,
+# matplotlib, plotly, tensorboard, kaggle, pandas, librosa, streamlit,
+# pyfluidsynth) since src/inference/recombine.py, src/models/disentangled_vae.py,
+# src/inference/audio.py and server/main.py don't import any of them.
+#
+# torch is installed CPU-only via the extra index below -- keeps the image a
+# few hundred MB instead of several GB, and this app never needs a GPU.
+torch
+pytorch-lightning
+pretty_midi
+numpy
+fastapi
+uvicorn[standard]
+python-multipart

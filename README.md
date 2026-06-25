@@ -1,3 +1,13 @@
+---
+title: Style Transfer Studio
+emoji: 🎹
+colorFrom: purple
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Polyphonic Music Style Transfer
 
 > This repository contains the code for a Master's dissertation project focused on transferring the musical style between polyphonic composers (e.g., making a piece by Bach sound as if it were composed by Chopin).
@@ -34,4 +44,17 @@
 
 3.  **Download Data:**
     Download the [MAESTRO Dataset v3.0.0](https://magenta.tensorflow.org/datasets/maestro) and place the `maestro-v3.0.0` folder inside the `data/raw/` directory.
+
+## Try It
+
+A standalone web app (custom HTML/CSS/JS frontend in `web/`, served by a small FastAPI
+backend in `server/main.py`) wraps the trained DisentangledVAE so you can recombine
+rhythm/pitch between MIDI clips without writing any code. See
+**[QUICKSTART.md](QUICKSTART.md)** for how to launch it on Windows with one double-click.
+
+The original Streamlit version (`app.py`) still works as a fallback — both share the same
+model pipeline in `src/inference/`, so they can't drift apart in behavior.
+
+A DAW plugin version of the same tool exists as unbuilt source in
+**[plugin/](plugin/README.md)** — see `plugin/BUILD.md` to compile it yourself.
 

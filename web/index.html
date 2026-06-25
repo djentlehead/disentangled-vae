@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Style Transfer Studio</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg
+            class="brand-mark"
+            width="30"
+            height="30"
+            viewBox="0 0 30 30"
+            aria-hidden="true"
+          >
+            <circle
+              cx="12"
+              cy="15"
+              r="10"
+              fill="var(--rhythm)"
+              opacity="0.85"
+            />
+            <circle cx="18" cy="15" r="10" fill="var(--pitch)" opacity="0.85" />
+          </svg>
+          <div class="brand-text">
+            <h1>Style Transfer Studio</h1>
+            <p>Disentangled rhythm &amp; pitch recombination</p>
+          </div>
+        </div>
+        <div class="status-pill" id="healthPill">
+          <span class="status-dot" id="healthDot"></span>
+          <span id="healthText">Connecting…</span>
+        </div>
+      </header>
+
+      <section class="info-banner" id="infoBanner">
+        <button
+          class="info-toggle"
+          id="infoToggle"
+          type="button"
+          aria-expanded="false"
+        >
+          <span class="info-toggle-icon">i</span>
+          <span>What this tool actually does - read before generating</span>
+          <span class="chevron" id="infoChevron">&#9656;</span>
+        </button>
+        <div class="info-content" id="infoContent" hidden>
+          <p>
+            This is a <strong>rhythm/pitch recombination</strong> tool, not a
+            "make it sound like Chopin" composer filter. It encodes a MIDI clip
+            into two separate latent codes - one for rhythm, one for pitch - and
+            lets you swap either half with another clip's. Try a Bach rhythm
+            with a Chopin melody contour, or just reconstruct a single piece to
+            hear what the model keeps and loses.
+          </p>
+          <p class="info-limits-title">
+            Current limits, so results make sense:
+          </p>
+          <ul>
+            <li>
+              Only the first <strong id="infoSeconds">32</strong> seconds of any
+              uploaded MIDI are used - the rest is ignored.
+            </li>
+            <li>
+              Only notes in MIDI pitch range
+              <strong id="infoPitchRange">40–71</strong> (roughly E2–G5) are
+              seen by the model.
+            </li>
+            <li>
+              Output is a single instrument, binary on/off piano roll - no
+              velocity or pedal nuance.
+            </li>
+            <li>
+              True composer-conditioned transfer is a planned v2, built on a
+              different model that isn't wired up here yet.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <main class="layout">
+        <section class="panel panel-input">
+          <div class="seg-switch" role="tablist">
+            <button
+              class="seg-btn active"
+              data-mode="recombine"
+              role="tab"
+              aria-selected="true"
+            >
+              Recombine
+            </button>
+            <button
+              class="seg-btn"
+              data-mode="explore"
+              role="tab"
+              aria-selected="false"
+            >
+              Explore
+            </button>
+          </div>
+
+          <div class="input-group" id="recombineGroup">
+            <div class="field">
+              <label class="field-label"
+                >Content <span class="field-sub">rhythm source</span></label
+              >
+              <div class="dropzone" id="contentZone" tabindex="0">
+                <input
+                  type="file"
+                  id="contentFileInput"
+                  accept=".mid,.midi"
+                  hidden
+                />
+                <div class="dropzone-empty" id="contentEmptyView">
+                  <svg
+                    class="dz-icon"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <p>
+                    Drag a MIDI file here, or
+                    <button
+                      type="button"
+                      class="link-btn"
+                      id="contentBrowseBtn"
+                    >
+                      browse
+                    </button>
+                  </p>
+                  <select class="example-select" id="contentExampleSelect">
+                    <option value="">— or pick an example —</option>
+                  </select>
+                </div>
+                <div class="dropzone-filled" id="contentFilledView" hidden>
+                  <canvas
+                    class="mini-roll"
+                    id="contentPreviewCanvas"
+                    width="280"
+                    height="56"
+                  ></canvas>
+                  <div class="dropzone-filled-row">
+                    <span class="dropzone-filename" id="contentFilename"></span>
+                    <button type="button" class="link-btn" id="contentClearBtn">
+                      change
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field-label"
+                >Style
+                <span class="field-sub">pitch source · optional</span></label
+              >
+              <div class="dropzone" id="styleZone" tabindex="0">
+                <input
+                  type="file"
+                  id="styleFileInput"
+                  accept=".mid,.midi"
+                  hidden
+                />
+                <div class="dropzone-empty" id="styleEmptyView">
+                  <svg
+                    class="dz-icon"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                  <p>
+                    Drag a MIDI file here, or
+                    <button type="button" class="link-btn" id="styleBrowseBtn">
+                      browse
+                    </button>
+                  </p>
+                  <select class="example-select" id="styleExampleSelect">
+                    <option value="">— or pick an example —</option>
+                  </select>
+                </div>
+                <div class="dropzone-filled" id="styleFilledView" hidden>
+                  <canvas
+                    class="mini-roll"
+                    id="stylePreviewCanvas"
+                    width="280"
+                    height="56"
+                  ></canvas>
+                  <div class="dropzone-filled-row">
+                    <span class="dropzone-filename" id="styleFilename"></span>
+                    <button type="button" class="link-btn" id="styleClearBtn">
+                      change
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="latent-controls">
+              <div class="latent-control-col">
+                <p class="latent-control-title rhythm-color">z_rhythm</p>
+                <div class="slider-row">
+                  <label for="rhythmScale">Scale</label>
+                  <input
+                    type="range"
+                    id="rhythmScale"
+                    min="0"
+                    max="3"
+                    step="0.05"
+                    value="1"
+                  />
+                  <output id="rhythmScaleVal">1.00</output>
+                </div>
+                <div class="slider-row">
+                  <label for="rhythmNoise">Noise σ</label>
+                  <input
+                    type="range"
+                    id="rhythmNoise"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    value="0"
+                  />
+                  <output id="rhythmNoiseVal">0.00</output>
+                </div>
+              </div>
+              <div class="latent-control-col">
+                <p class="latent-control-title pitch-color">z_pitch</p>
+                <div class="slider-row">
+                  <label for="pitchScale">Scale</label>
+                  <input
+                    type="range"
+                    id="pitchScale"
+                    min="0"
+                    max="3"
+                    step="0.05"
+                    value="1"
+                  />
+                  <output id="pitchScaleVal">1.00</output>
+                </div>
+                <div class="slider-row">
+                  <label for="pitchNoise">Noise σ</label>
+                  <input
+                    type="range"
+                    id="pitchNoise"
+                    min="0"
+                    max="2"
+                    step="0.05"
+                    value="0"
+                  />
+                  <output id="pitchNoiseVal">0.00</output>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="input-group" id="exploreGroup" hidden>
+            <p class="field-sub explore-note">
+              Ignores any files above — samples z_rhythm and z_pitch
+              independently from N(0, σ).
+            </p>
+            <div class="latent-controls">
+              <div class="latent-control-col">
+                <p class="latent-control-title rhythm-color">z_rhythm</p>
+                <div class="slider-row">
+                  <label for="rhythmSigma">σ</label>
+                  <input
+                    type="range"
+                    id="rhythmSigma"
+                    min="0.1"
+                    max="3"
+                    step="0.1"
+                    value="1"
+                  />
+                  <output id="rhythmSigmaVal">1.0</output>
+                </div>
+              </div>
+              <div class="latent-control-col">
+                <p class="latent-control-title pitch-color">z_pitch</p>
+                <div class="slider-row">
+                  <label for="pitchSigma">σ</label>
+                  <input
+                    type="range"
+                    id="pitchSigma"
+                    min="0.1"
+                    max="3"
+                    step="0.1"
+                    value="1"
+                  />
+                  <output id="pitchSigmaVal">1.0</output>
+                </div>
+              </div>
+            </div>
+            <div class="slider-row seed-row">
+              <label for="seedInput">Seed</label>
+              <input
+                type="number"
+                id="seedInput"
+                min="0"
+                max="999999"
+                value="42"
+              />
+              <button type="button" class="link-btn" id="randomSeedBtn">
+                randomize
+              </button>
+            </div>
+          </div>
+
+          <details class="input-group advanced" id="advancedGroup">
+            <summary>Cleanup &amp; output</summary>
+            <div class="slider-row">
+              <label for="threshold">Binary threshold</label>
+              <input
+                type="range"
+                id="threshold"
+                min="0.05"
+                max="0.95"
+                step="0.05"
+                value="0.35"
+              />
+              <output id="thresholdVal">0.35</output>
+            </div>
+            <div class="slider-row">
+              <label for="minLen">Min note length</label>
+              <input
+                type="range"
+                id="minLen"
+                min="0"
+                max="8"
+                step="1"
+                value="2"
+              />
+              <output id="minLenVal">2</output>
+            </div>
+            <div class="slider-row">
+              <label for="gapMerge">Merge gaps ≤</label>
+              <input
+                type="range"
+                id="gapMerge"
+                min="0"
+                max="8"
+                step="1"
+                value="2"
+              />
+              <output id="gapMergeVal">2</output>
+            </div>
+            <div class="slider-row">
+              <label for="beatSteps">Snap onsets to grid</label>
+              <input
+                type="range"
+                id="beatSteps"
+                min="0"
+                max="8"
+                step="1"
+                value="0"
+              />
+              <output id="beatStepsVal">off</output>
+            </div>
+            <div class="slider-row">
+              <label for="bpmInput">Output BPM</label>
+              <input
+                type="number"
+                id="bpmInput"
+                min="40"
+                max="240"
+                step="5"
+                value="120"
+              />
+            </div>
+          </details>
+
+          <div class="action-row">
+            <button
+              class="btn-secondary btn-reset"
+              id="resetBtn"
+              type="button"
+              title="Reset all sliders to their default values"
+            >
+              Reset
+            </button>
+            <button class="btn-generate" id="generateBtn" type="button">
+              <span id="generateBtnLabel">Generate</span>
+            </button>
+          </div>
+
+          <div class="error-banner" id="errorBanner" hidden></div>
+        </section>
+
+        <section class="panel panel-output">
+          <div class="output-empty" id="outputEmpty">
+            <svg
+              width="64"
+              height="64"
+              viewBox="0 0 64 64"
+              aria-hidden="true"
+              class="empty-art"
+            >
+              <rect
+                x="6"
+                y="40"
+                width="10"
+                height="10"
+                rx="2"
+                fill="var(--rhythm)"
+                opacity="0.5"
+              />
+              <rect
+                x="20"
+                y="28"
+                width="10"
+                height="22"
+                rx="2"
+                fill="var(--pitch)"
+                opacity="0.5"
+              />
+              <rect
+                x="34"
+                y="16"
+                width="10"
+                height="34"
+                rx="2"
+                fill="var(--rhythm)"
+                opacity="0.35"
+              />
+              <rect
+                x="48"
+                y="34"
+                width="10"
+                height="16"
+                rx="2"
+                fill="var(--pitch)"
+                opacity="0.35"
+              />
+            </svg>
+            <p>Generate something to see it here.</p>
+          </div>
+
+          <div class="output-result" id="outputResult" hidden>
+            <div class="output-header">
+              <p class="output-mode-label" id="outputModeLabel"></p>
+              <div class="output-stats">
+                <span class="stat-chip" id="statNotes"></span>
+                <span class="stat-chip" id="statDensity"></span>
+              </div>
+            </div>
+
+            <canvas
+              id="rollCanvas"
+              class="roll-canvas"
+              width="900"
+              height="260"
+            ></canvas>
+
+            <div class="latent-row">
+              <div class="latent-chart-col">
+                <p class="latent-chart-title rhythm-color">z_rhythm</p>
+                <canvas id="rhythmBarCanvas" width="280" height="70"></canvas>
+              </div>
+              <div class="latent-chart-col">
+                <p class="latent-chart-title pitch-color">z_pitch</p>
+                <canvas id="pitchBarCanvas" width="280" height="70"></canvas>
+              </div>
+            </div>
+
+            <div class="audio-row">
+              <audio id="audioPlayer" controls></audio>
+              <span class="audio-caption" id="audioCaption"></span>
+            </div>
+
+            <div class="output-actions">
+              <button class="btn-secondary" id="downloadBtn" type="button">
+                Download MIDI
+              </button>
+            </div>
+
+            <p class="output-footer" id="outputFooter"></p>
+          </div>
+        </section>
+      </main>
+
+      <!-- <footer class="footer">
+        Runs entirely on this machine - nothing leaves localhost.
+      </footer> -->
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
