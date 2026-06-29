@@ -1,3 +1,11 @@
+---
+title: Disentangled VAE Style Transfer
+emoji: 🎹
+colorFrom: green
+colorTo: blue
+sdk: docker
+pinned: false
+---
 
 # Polyphonic Music Style Transfer
 
