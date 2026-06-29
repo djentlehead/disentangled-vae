@@ -24,9 +24,15 @@ data/raw/
 # Logs and Checkpoints
 lightning_logs/
 checkpoints/
+launch.log
 
 # Temporary Files
 temp_audio.wav
+
+# Local session / tooling files
+CLAUDE.md
+__MACOSX/
+515 Media House Design System/
 *.mid
 !examples/*.mid
 
