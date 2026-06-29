@@ -155,6 +155,7 @@ async def generate(
     rhythm_sigma: float = Form(1.0),
     pitch_sigma: float = Form(1.0),
     seed: int = Form(42),
+    max_polyphony: int = Form(8),
 ):
     model, err = get_model()
     if model is None:
@@ -182,7 +183,7 @@ async def generate(
     # done inline here so we keep pr_bin around for the frontend's piano-roll
     # canvas instead of re-deriving it with a lossy MIDI round-trip.
     pr_raw = decode_latents(model, z_r, z_p)
-    pr_bin = postprocess_roll(pr_raw, threshold, min_len, gap_merge, beat_steps)
+    pr_bin = postprocess_roll(pr_raw, threshold, min_len, gap_merge, beat_steps, max_polyphony)
     pm_out = roll_to_midi(pr_bin, bpm=float(bpm))
     note_count = len(pm_out.instruments[0].notes) if pm_out.instruments else 0
     density = float(pr_bin.mean())

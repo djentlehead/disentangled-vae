@@ -88,8 +88,24 @@ def roll_to_midi(pr: np.ndarray, bpm: float = 120.0) -> pretty_midi.PrettyMIDI:
 
 
 def postprocess_roll(prob: np.ndarray, threshold: float, min_len: int,
-                      gap_merge: int, beat_steps: int) -> np.ndarray:
-    roll = (prob >= threshold).astype(np.float32)
+                      gap_merge: int, beat_steps: int,
+                      max_polyphony: int = 8) -> np.ndarray:
+    # Per-timestep polyphony cap: keeps top-N notes by raw probability instead
+    # of hard-thresholding. Eliminates decoder-bias "piano mash" artifacts where
+    # OOD latents drive 15-20 simultaneous notes at certain timesteps.
+    if max_polyphony > 0:
+        roll = np.zeros_like(prob)
+        for t in range(prob.shape[0]):
+            row = prob[t]
+            above = np.where(row >= threshold)[0]
+            if len(above) <= max_polyphony:
+                roll[t, above] = 1.0
+            else:
+                top_idx = np.argsort(row)[-max_polyphony:]
+                roll[t, top_idx] = 1.0
+        roll = roll.astype(np.float32)
+    else:
+        roll = (prob >= threshold).astype(np.float32)
 
     def runs(col):
         out, i, n = [], 0, len(col)
