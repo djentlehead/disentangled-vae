@@ -24,10 +24,7 @@ COPY server/ server/
 COPY web/ web/
 COPY examples/ examples/
 COPY lightning_logs/disentangled_vae/*.ckpt lightning_logs/disentangled_vae/
-
-# No bundled soundfont here (FluidR3_GM.sf2 is 142MB and not in git) -- the
-# audio preview falls back to the built-in sine-wave synth automatically
-# (src/inference/audio.py). Downloaded MIDI is unaffected either way.
+COPY SalC5Light2.sf2 .
 
 # Hugging Face Spaces' Docker SDK expects the app on port 7860 by default.
 EXPOSE 7860
