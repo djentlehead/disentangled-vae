@@ -33,6 +33,17 @@ temp_audio.wav
 CLAUDE.md
 __MACOSX/
 515 Media House Design System/
+
+# JS / Node
+node_modules/
+package.json
+package-lock.json
+
+# Generated outputs
+graphify-out/
+
+# Test / scratch files
+*.mscz
 *.mid
 !examples/*.mid
 
