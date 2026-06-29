@@ -29,9 +29,10 @@ __pycache__
 # Not part of this image.
 /plugin
 
-# Large file deliberately not bundled (see Dockerfile comment).
+# Large files -- FluidR3 excluded, Salamander lite included for piano preview.
 /FluidR3_GM.sf2
 *.sf2
+!SalC5Light2.sf2
 
 # Misc local artifacts -- root-anchored so this doesn't catch examples/*.mid,
 # which the Dockerfile needs.

@@ -9,10 +9,11 @@ __pycache__/
 venv/
 ENV/
 
-# Data Files 
+# Data Files
 data/processed/
 data/raw/
 *.sf2
+!SalC5Light2.sf2
 
 # Notebook Checkpoints
 .ipynb_checkpoints/
