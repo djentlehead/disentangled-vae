@@ -11,6 +11,8 @@ ENV PYTHONPATH=/app
 # All deps below (torch CPU build, pytorch-lightning, pretty_midi, fastapi,
 # uvicorn) ship manylinux wheels for this base image, so no compiler toolchain
 # is needed here -- keeps the image smaller and the build faster.
+RUN apt-get update && apt-get install -y fluidsynth && rm -rf /var/lib/apt/lists/*
+
 COPY requirements-docker.txt .
 RUN pip install --no-cache-dir \
     --extra-index-url https://download.pytorch.org/whl/cpu \
