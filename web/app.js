@@ -13,8 +13,8 @@
   "use strict";
 
   const COLORS = {
-    rhythm: "#4c9be8",
-    pitch: "#e87c4c",
+    rhythm: "#5CD9B5", // lcd-glow
+    pitch:  "#E8401A", // signal
   };
 
   const el = (id) => document.getElementById(id);
@@ -128,7 +128,7 @@
     const cellH = h / cols;
 
     if (grid) {
-      ctx.strokeStyle = "rgba(255,255,255,0.05)";
+      ctx.strokeStyle = "rgba(255,255,255,0.06)";
       ctx.lineWidth = 1;
       const fs = state.meta.fs || 8;
       for (let t = 0; t <= rows; t += fs) {
@@ -148,8 +148,9 @@
         const x = t * cellW;
         const y = h - (p + 1) * cellH;
         if (mode === "gradient") {
-          const hue = 260 - (p / cols) * 85; // violet (low) -> cyan (high)
-          ctx.fillStyle = `hsl(${hue} 80% 62%)`;
+          // lcd teal: dark at low pitch, bright lcd-glow at high pitch
+          const lightness = 35 + (p / cols) * 40;
+          ctx.fillStyle = `hsl(162 65% ${lightness}%)`;
         } else {
           ctx.fillStyle = color;
         }
@@ -169,7 +170,7 @@
     const mid = h / 2;
     const maxAbs = Math.max(1e-6, ...values.map((v) => Math.abs(v)));
 
-    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(0, mid + 0.5); ctx.lineTo(w, mid + 0.5); ctx.stroke();
 
@@ -221,6 +222,40 @@
       input.value = value;
       input.dispatchEvent(new Event("input"));
     }
+    document.querySelectorAll(".preset-chip").forEach((c) => c.classList.remove("active"));
+  });
+
+  // ---------- presets ----------
+
+  const EXPLORE_PRESETS = {
+    // σ controls generation range; threshold/cleanup tuned to match expected output density
+    subtle:     { rhythmSigma: "0.5", pitchSigma: "0.5",  threshold: "0.45", minLen: "3", gapMerge: "2", beatSteps: "0" },
+    balanced:   { rhythmSigma: "1.0", pitchSigma: "1.0",  threshold: "0.35", minLen: "2", gapMerge: "2", beatSteps: "0" },
+    expressive: { rhythmSigma: "1.5", pitchSigma: "1.5",  threshold: "0.30", minLen: "2", gapMerge: "3", beatSteps: "0" },
+    wild:       { rhythmSigma: "2.5", pitchSigma: "2.5",  threshold: "0.25", minLen: "1", gapMerge: "1", beatSteps: "0" },
+  };
+  const RECOMBINE_PRESETS = {
+    faithful:  { rhythmScale: "1.0", rhythmNoise: "0.0",  pitchScale: "1.0", pitchNoise: "0.0",  threshold: "0.40", minLen: "2", gapMerge: "2", beatSteps: "0" },
+    hybrid:    { rhythmScale: "1.0", rhythmNoise: "0.15", pitchScale: "1.0", pitchNoise: "0.15", threshold: "0.35", minLen: "2", gapMerge: "2", beatSteps: "0" },
+    amplified: { rhythmScale: "1.4", rhythmNoise: "0.1",  pitchScale: "1.4", pitchNoise: "0.1",  threshold: "0.30", minLen: "2", gapMerge: "3", beatSteps: "0" },
+  };
+
+  document.querySelectorAll(".preset-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const group = chip.dataset.group;
+      const vals = group === "explore"
+        ? EXPLORE_PRESETS[chip.dataset.preset]
+        : RECOMBINE_PRESETS[chip.dataset.preset];
+      if (!vals) return;
+      for (const [key, value] of Object.entries(vals)) {
+        const input = dom[key];
+        if (!input) continue;
+        input.value = value;
+        input.dispatchEvent(new Event("input"));
+      }
+      document.querySelectorAll(`.preset-chip[data-group="${group}"]`)
+        .forEach((c) => c.classList.toggle("active", c === chip));
+    });
   });
 
   // ---------- info banner ----------
@@ -518,9 +553,12 @@
     if (data.audio_base64) {
       dom.audioPlayer.src = `data:audio/wav;base64,${data.audio_base64}`;
       dom.audioPlayer.hidden = false;
-      dom.audioCaption.textContent = data.audio_method === "sine"
+      const method = data.audio_method || "";
+      dom.audioCaption.textContent = method === "sine"
         ? "Sine-wave preview — FluidSynth wasn't found, so this is a rough approximation, not real piano tone. The downloaded MIDI is unaffected."
-        : "";
+        : method.startsWith("fluidsynth:")
+          ? `Soundfont: ${method.slice("fluidsynth:".length)}`
+          : "";
     } else {
       dom.audioPlayer.hidden = true;
       dom.audioCaption.textContent = data.note_count > 0

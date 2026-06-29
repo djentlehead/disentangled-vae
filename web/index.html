@@ -8,27 +8,32 @@
   </head>
   <body>
     <div class="app">
+      <div class="serial-strip">
+        <span>№ 001</span>
+        <span class="serial-sep">/</span>
+        <span>MIDI PROCESSOR</span>
+        <span class="serial-sep">/</span>
+        <span>DISENTANGLED VAE</span>
+        <span class="serial-sep">/</span>
+        <span
+          ><span class="accent-rhythm">RHYTHM</span>
+          <span class="serial-sep">·</span>
+          <span class="accent-pitch">PITCH</span></span
+        >
+        <span class="serial-sep">/</span>
+        <span>2026</span>
+      </div>
+
+      <!-- topbar -->
       <header class="topbar">
         <div class="brand">
-          <svg
-            class="brand-mark"
-            width="30"
-            height="30"
-            viewBox="0 0 30 30"
-            aria-hidden="true"
-          >
-            <circle
-              cx="12"
-              cy="15"
-              r="10"
-              fill="var(--rhythm)"
-              opacity="0.85"
-            />
-            <circle cx="18" cy="15" r="10" fill="var(--pitch)" opacity="0.85" />
-          </svg>
+          <span class="brand-glyph">(◉)</span>
           <div class="brand-text">
             <h1>Style Transfer Studio</h1>
-            <p>Disentangled rhythm &amp; pitch recombination</p>
+            <span class="brand-sub"
+              >Disentangled <span class="rhythm-color">Rhythm</span> &amp;
+              <span class="pitch-color">Pitch</span> Recombination</span
+            >
           </div>
         </div>
         <div class="status-pill" id="healthPill">
@@ -37,6 +42,7 @@
         </div>
       </header>
 
+      <!-- info banner -->
       <section class="info-banner" id="infoBanner">
         <button
           class="info-toggle"
@@ -44,9 +50,13 @@
           type="button"
           aria-expanded="false"
         >
-          <span class="info-toggle-icon">i</span>
-          <span>What this tool actually does - read before generating</span>
-          <span class="chevron" id="infoChevron">&#9656;</span>
+          <div class="info-left">
+            <span class="info-label">TOOL INFO · № 001</span>
+            <span class="info-headline"
+              >STYLE TRANSFER.<br />NOT STYLE MAGIC.</span
+            >
+          </div>
+          <span class="chevron" id="infoChevron">→</span>
         </button>
         <div class="info-content" id="infoContent" hidden>
           <p>
@@ -57,13 +67,11 @@
             with a Chopin melody contour, or just reconstruct a single piece to
             hear what the model keeps and loses.
           </p>
-          <p class="info-limits-title">
-            Current limits, so results make sense:
-          </p>
+          <p class="info-limits-title">Current limits</p>
           <ul>
             <li>
-              Only the first <strong id="infoSeconds">32</strong> seconds of any
-              uploaded MIDI are used - the rest is ignored.
+              Only the first <strong id="infoSeconds">32</strong>s of any
+              uploaded MIDI are used. The rest is ignored.
             </li>
             <li>
               Only notes in MIDI pitch range
@@ -76,14 +84,17 @@
             </li>
             <li>
               True composer-conditioned transfer is a planned v2, built on a
-              different model that isn't wired up here yet.
+              different model not wired up here yet.
             </li>
           </ul>
         </div>
       </section>
 
+      <!-- main layout -->
       <main class="layout">
+        <!-- INPUT PANEL -->
         <section class="panel panel-input">
+          <!-- mode switch -->
           <div class="seg-switch" role="tablist">
             <button
               class="seg-btn active"
@@ -103,11 +114,12 @@
             </button>
           </div>
 
+          <!-- recombine group -->
           <div class="input-group" id="recombineGroup">
-            <div class="field">
-              <label class="field-label"
-                >Content <span class="field-sub">rhythm source</span></label
-              >
+            <div class="field field--content">
+              <label class="field-label">
+                Content <span class="field-sub">· rhythm source</span>
+              </label>
               <div class="dropzone" id="contentZone" tabindex="0">
                 <input
                   type="file"
@@ -118,8 +130,8 @@
                 <div class="dropzone-empty" id="contentEmptyView">
                   <svg
                     class="dz-icon"
-                    width="22"
-                    height="22"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     aria-hidden="true"
@@ -128,12 +140,12 @@
                       d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"
                       stroke="currentColor"
                       stroke-width="1.6"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                      stroke-linecap="square"
+                      stroke-linejoin="miter"
                     />
                   </svg>
                   <p>
-                    Drag a MIDI file here, or
+                    Drop a MIDI file here, or
                     <button
                       type="button"
                       class="link-btn"
@@ -163,11 +175,10 @@
               </div>
             </div>
 
-            <div class="field">
-              <label class="field-label"
-                >Style
-                <span class="field-sub">pitch source · optional</span></label
-              >
+            <div class="field field--style">
+              <label class="field-label">
+                Style <span class="field-sub">· pitch source · optional</span>
+              </label>
               <div class="dropzone" id="styleZone" tabindex="0">
                 <input
                   type="file"
@@ -178,8 +189,8 @@
                 <div class="dropzone-empty" id="styleEmptyView">
                   <svg
                     class="dz-icon"
-                    width="22"
-                    height="22"
+                    width="20"
+                    height="20"
                     viewBox="0 0 24 24"
                     fill="none"
                     aria-hidden="true"
@@ -188,12 +199,12 @@
                       d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"
                       stroke="currentColor"
                       stroke-width="1.6"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                      stroke-linecap="square"
+                      stroke-linejoin="miter"
                     />
                   </svg>
                   <p>
-                    Drag a MIDI file here, or
+                    Drop a MIDI file here, or
                     <button type="button" class="link-btn" id="styleBrowseBtn">
                       browse
                     </button>
@@ -219,9 +230,37 @@
               </div>
             </div>
 
+            <div class="preset-row">
+              <span class="preset-label">PRESETS</span>
+              <button
+                type="button"
+                class="preset-chip"
+                data-group="recombine"
+                data-preset="faithful"
+              >
+                FAITHFUL
+              </button>
+              <button
+                type="button"
+                class="preset-chip"
+                data-group="recombine"
+                data-preset="hybrid"
+              >
+                HYBRID
+              </button>
+              <button
+                type="button"
+                class="preset-chip"
+                data-group="recombine"
+                data-preset="amplified"
+              >
+                AMPLIFIED
+              </button>
+            </div>
+
             <div class="latent-controls">
-              <div class="latent-control-col">
-                <p class="latent-control-title rhythm-color">z_rhythm</p>
+              <div class="latent-control-col col--rhythm">
+                <p class="latent-control-title rhythm-color">Z_Rhythm</p>
                 <div class="slider-row">
                   <label for="rhythmScale">Scale</label>
                   <input
@@ -247,8 +286,8 @@
                   <output id="rhythmNoiseVal">0.00</output>
                 </div>
               </div>
-              <div class="latent-control-col">
-                <p class="latent-control-title pitch-color">z_pitch</p>
+              <div class="latent-control-col col--pitch">
+                <p class="latent-control-title pitch-color">Z_Pitch</p>
                 <div class="slider-row">
                   <label for="pitchScale">Scale</label>
                   <input
@@ -278,13 +317,49 @@
           </div>
 
           <div class="input-group" id="exploreGroup" hidden>
-            <p class="field-sub explore-note">
-              Ignores any files above — samples z_rhythm and z_pitch
-              independently from N(0, σ).
+            <p class="explore-note">
+              No files needed — generates a new piece from scratch. σ controls
+              how far from the model's average sound each result drifts. Higher
+              σ = more surprising and unpredictable.
             </p>
+            <div class="preset-row">
+              <span class="preset-label">PRESETS</span>
+              <button
+                type="button"
+                class="preset-chip"
+                data-group="explore"
+                data-preset="subtle"
+              >
+                SUBTLE
+              </button>
+              <button
+                type="button"
+                class="preset-chip"
+                data-group="explore"
+                data-preset="balanced"
+              >
+                BALANCED
+              </button>
+              <button
+                type="button"
+                class="preset-chip"
+                data-group="explore"
+                data-preset="expressive"
+              >
+                EXPRESSIVE
+              </button>
+              <button
+                type="button"
+                class="preset-chip"
+                data-group="explore"
+                data-preset="wild"
+              >
+                WILD
+              </button>
+            </div>
             <div class="latent-controls">
-              <div class="latent-control-col">
-                <p class="latent-control-title rhythm-color">z_rhythm</p>
+              <div class="latent-control-col col--rhythm">
+                <p class="latent-control-title rhythm-color">Z_Rhythm</p>
                 <div class="slider-row">
                   <label for="rhythmSigma">σ</label>
                   <input
@@ -298,8 +373,8 @@
                   <output id="rhythmSigmaVal">1.0</output>
                 </div>
               </div>
-              <div class="latent-control-col">
-                <p class="latent-control-title pitch-color">z_pitch</p>
+              <div class="latent-control-col col--pitch">
+                <p class="latent-control-title pitch-color">Z_Pitch</p>
                 <div class="slider-row">
                   <label for="pitchSigma">σ</label>
                   <input
@@ -329,8 +404,9 @@
             </div>
           </div>
 
+          <!-- cleanup + output (advanced) -->
           <details class="input-group advanced" id="advancedGroup">
-            <summary>Cleanup &amp; output</summary>
+            <summary>Cleanup &amp; Output</summary>
             <div class="slider-row">
               <label for="threshold">Binary threshold</label>
               <input
@@ -343,6 +419,10 @@
               />
               <output id="thresholdVal">0.35</output>
             </div>
+            <p class="param-hint">
+              How confident the model must be to place a note. Higher = fewer,
+              cleaner notes. Lower = denser output. Start at 0.35.
+            </p>
             <div class="slider-row">
               <label for="minLen">Min note length</label>
               <input
@@ -355,6 +435,10 @@
               />
               <output id="minLenVal">2</output>
             </div>
+            <p class="param-hint">
+              Removes notes shorter than N steps (1 step ≈ ⅛ sec). Cleans up
+              glitchy blips. Try 2–3 to start.
+            </p>
             <div class="slider-row">
               <label for="gapMerge">Merge gaps ≤</label>
               <input
@@ -367,8 +451,12 @@
               />
               <output id="gapMergeVal">2</output>
             </div>
+            <p class="param-hint">
+              Bridges two nearby notes if the gap is ≤ N steps. Smooths choppy
+              or fragmented passages.
+            </p>
             <div class="slider-row">
-              <label for="beatSteps">Snap onsets to grid</label>
+              <label for="beatSteps">Snap to grid</label>
               <input
                 type="range"
                 id="beatSteps"
@@ -379,6 +467,10 @@
               />
               <output id="beatStepsVal">off</output>
             </div>
+            <p class="param-hint">
+              Quantizes note starts to a rhythmic grid (0 = off). 8 = 16th-note
+              grid at 120 BPM. Makes output feel tighter.
+            </p>
             <div class="slider-row">
               <label for="bpmInput">Output BPM</label>
               <input
@@ -390,14 +482,19 @@
                 value="120"
               />
             </div>
+            <p class="param-hint">
+              Playback tempo of the downloaded MIDI file. Doesn't affect the
+              model — only how fast the notes play back.
+            </p>
           </details>
 
+          <!-- actions -->
           <div class="action-row">
             <button
               class="btn-secondary btn-reset"
               id="resetBtn"
               type="button"
-              title="Reset all sliders to their default values"
+              title="Reset all sliders to defaults"
             >
               Reset
             </button>
@@ -409,55 +506,40 @@
           <div class="error-banner" id="errorBanner" hidden></div>
         </section>
 
+        <!-- OUTPUT PANEL -->
         <section class="panel panel-output">
+          <!-- empty state -->
           <div class="output-empty" id="outputEmpty">
             <svg
-              width="64"
-              height="64"
+              width="56"
+              height="56"
               viewBox="0 0 64 64"
               aria-hidden="true"
               class="empty-art"
             >
-              <rect
-                x="6"
-                y="40"
-                width="10"
-                height="10"
-                rx="2"
-                fill="var(--rhythm)"
-                opacity="0.5"
-              />
-              <rect
-                x="20"
-                y="28"
-                width="10"
-                height="22"
-                rx="2"
-                fill="var(--pitch)"
-                opacity="0.5"
-              />
+              <rect x="6" y="40" width="10" height="10" fill="var(--rhythm)" />
+              <rect x="20" y="28" width="10" height="22" fill="var(--pitch)" />
               <rect
                 x="34"
                 y="16"
                 width="10"
                 height="34"
-                rx="2"
                 fill="var(--rhythm)"
-                opacity="0.35"
+                opacity=".45"
               />
               <rect
                 x="48"
                 y="34"
                 width="10"
                 height="16"
-                rx="2"
                 fill="var(--pitch)"
-                opacity="0.35"
+                opacity=".45"
               />
             </svg>
             <p>Generate something to see it here.</p>
           </div>
 
+          <!-- result -->
           <div class="output-result" id="outputResult" hidden>
             <div class="output-header">
               <p class="output-mode-label" id="outputModeLabel"></p>
@@ -471,17 +553,17 @@
               id="rollCanvas"
               class="roll-canvas"
               width="900"
-              height="260"
+              height="240"
             ></canvas>
 
             <div class="latent-row">
               <div class="latent-chart-col">
-                <p class="latent-chart-title rhythm-color">z_rhythm</p>
-                <canvas id="rhythmBarCanvas" width="280" height="70"></canvas>
+                <p class="latent-chart-title rhythm-color">Z_Rhythm</p>
+                <canvas id="rhythmBarCanvas" width="280" height="60"></canvas>
               </div>
               <div class="latent-chart-col">
-                <p class="latent-chart-title pitch-color">z_pitch</p>
-                <canvas id="pitchBarCanvas" width="280" height="70"></canvas>
+                <p class="latent-chart-title pitch-color">Z_Pitch</p>
+                <canvas id="pitchBarCanvas" width="280" height="60"></canvas>
               </div>
             </div>
 
@@ -492,7 +574,7 @@
 
             <div class="output-actions">
               <button class="btn-secondary" id="downloadBtn" type="button">
-                Download MIDI
+                Download MIDI →
               </button>
             </div>
 
@@ -501,10 +583,10 @@
         </section>
       </main>
 
-      <!-- <footer class="footer">
-        Runs entirely on this machine - nothing leaves localhost.
-      </footer> -->
+      <footer class="footer">
+        Runs entirely on this machine — nothing leaves localhost.
+      </footer>
     </div>
-    <script src="app.js"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>
